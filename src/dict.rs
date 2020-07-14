@@ -24,10 +24,11 @@ impl Record {
 
 #[derive(Debug)]
 pub struct Answer {
-    a: String,
-    extra: Option<String>,
+    pub a: String,
+    pub extra: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct TwoWayMap {
     pub e_m: BTreeMap<String, Answer>,
     pub m_e: BTreeMap<String, Answer>,
@@ -51,13 +52,22 @@ impl TwoWayMap {
         }
         if let Some(Answer { a: en, .. }) = self.m_e.get(&r.michuhu) {
             if en != &r.english {
-                r.michuhu.push(',');
-                r.michuhu.push_str(en);
+                r.english.push(',');
+                r.english.push_str(en);
                 res = true;
             }
         }
         self.e_m.insert(r.english.clone(), r.m_answer());
         self.m_e.insert(r.michuhu.clone(), r.e_answer());
         res
+    }
+
+    pub fn merge(&mut self, rhs: Self) {
+        for (k, v) in rhs.e_m {
+            self.e_m.insert(k, v);
+        }
+        for (k, v) in rhs.m_e {
+            self.m_e.insert(k, v);
+        }
     }
 }
