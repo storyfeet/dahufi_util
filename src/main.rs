@@ -3,18 +3,51 @@ use michuhu_lib::*;
 use std::io::stdin;
 use std::io::Read;
 
+use clap_conf::prelude::*;
+
 fn main() -> anyhow::Result<()> {
     let mut it = std::env::args().skip(1);
 
-    let select = it.next();
+    let clp = clap_app!(michuhu =>
+        (author:"Matthew Stoodley")
+        (version:crate_version!())
+        (about:"A Util program for working with the Michuhu language")
+        (@arg files: -f --files +takes_value ... "The file locations")
+        (@arg convert: -c --convert +takes_value ... "words to type out")
+        //(@arg romanize: -r --romanize +takes_value ... "Michuhu to romanize")
+        (@arg print_e: -e --print_e "Print the built dictionary engligh to michuhu")
+        (@arg print_m: -m --print_m "print the built dictionart michuhu to english")
+        (@arg noline: -n --no_line "no newline on end of output")
+    )
+    .get_matches();
+
+    let conf = with_toml_env(&clp, &["home/.config/michuhu/conf.toml"]);
+
+    if let Some(mul) = conf.grab_multi().arg("convert").done() {
+        let mut sp = "";
+        for w in mul {
+            let res = parser::Converter.parse_s(&w)?;
+            print!("{}{}", sp, res);
+            sp = " ";
+        }
+        if !conf.bool_flag("noline", Filter::Arg) {
+            println!("");
+        }
+    }
+
+    Ok(())
+
+    /*
     match select.as_ref().map(|s| &s[..]) {
         None => translate_stdin(),
         Some("words") => translate_words(it, false),
         Some("line") => translate_words(it, true),
+        Some("get_e") => get_e(it),
         Some("build_e") => print_e_m(it),
         Some("build_m") => print_m_e(it),
         Some(_v) => Ok(()),
     }
+    */
 }
 
 fn print_e_m<I: Iterator<Item = String>>(it: I) -> anyhow::Result<()> {

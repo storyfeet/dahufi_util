@@ -41,25 +41,25 @@ impl TwoWayMap {
             m_e: BTreeMap::new(),
         }
     }
-    pub fn insert(&mut self, mut r: Record) -> bool {
-        let mut res = false;
-        if let Some(Answer { a: mi, .. }) = self.e_m.get(&r.english) {
-            if mi != &r.michuhu {
-                r.michuhu.push(',');
-                r.michuhu.push_str(mi);
-                res = true;
-            }
-        }
-        if let Some(Answer { a: en, .. }) = self.m_e.get(&r.michuhu) {
-            if en != &r.english {
-                r.english.push(',');
-                r.english.push_str(en);
-                res = true;
-            }
-        }
-        self.e_m.insert(r.english.clone(), r.m_answer());
-        self.m_e.insert(r.michuhu.clone(), r.e_answer());
-        res
+    pub fn insert(&mut self, r: Record) {
+        let e_ans = match self.e_m.get(&r.english) {
+            Some(Answer { a: mi, .. }) if mi == &r.michuhu => r.m_answer(),
+            Some(Answer { a: mi, extra: ex }) => Answer {
+                a: format!("{},{}", r.michuhu, mi),
+                extra: r.extra.clone().or_else(|| ex.clone()),
+            },
+            None => r.m_answer(),
+        };
+        let m_ans = match self.m_e.get(&r.michuhu) {
+            Some(Answer { a: en, .. }) if en == &r.english => r.e_answer(),
+            Some(Answer { a: en, extra: ex }) => Answer {
+                a: format!("{},{}", r.english, en),
+                extra: r.extra.clone().or_else(|| ex.clone()),
+            },
+            None => r.e_answer(),
+        };
+        self.e_m.insert(r.english.clone(), e_ans);
+        self.m_e.insert(r.michuhu.clone(), m_ans);
     }
 
     pub fn merge(&mut self, rhs: Self) {

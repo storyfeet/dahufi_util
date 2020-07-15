@@ -17,3 +17,5 @@ name="michuhu"
 [dependencies]
 gobble = {path="../../mlibs/gobble/"}
 anyhow = "1.0.31"
+clap_conf = {path="../../mlibs/clap_conf/"}
+glob = "0.3.0"

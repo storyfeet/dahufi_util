@@ -1,6 +1,10 @@
 use crate::dict;
 use gobble::*;
 
+parser! { (Converter ->String)
+    chars_until(Letter, eoi).map(|(a, _b)| a)
+}
+
 parser! { (EnString -> String)
     string(((Alpha,NumDigit).iplus(),(Alpha,NumDigit," -").istar())).map(|s|s.trim().to_string())
 }
