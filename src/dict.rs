@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct Record {
@@ -6,13 +7,62 @@ pub struct Record {
     pub michuhu: String,
 }
 
+#[derive(Debug)]
 pub enum Answer {
     One(String),
     Many(Vec<String>),
 }
 
+impl Answer {
+    pub fn join(&mut self, b: Self) {
+        let mut t = Answer::One(String::new());
+        std::mem::swap(&mut t, self);
+        use Answer::*;
+        *self = match (t, b) {
+            (One(o), Many(mut m)) | (Many(mut m), One(o)) => {
+                if !m.contains(&o) {
+                    m.push(o);
+                }
+                Many(m)
+            }
+            (Many(mut ma), Many(mb)) => {
+                for o in mb {
+                    if !ma.contains(&o) {
+                        ma.push(o);
+                    }
+                }
+                Many(ma)
+            }
+            (One(a), One(b)) => {
+                if a == b {
+                    One(a)
+                } else {
+                    Many(vec![a, b])
+                }
+            }
+        }
+    }
+}
+
+impl fmt::Display for Answer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Answer::One(s) => write!(f, "{}", s),
+            Answer::Many(v) => {
+                let mut coma = "";
+                for x in v {
+                    write!(f, "{}{}", x, coma)?;
+                    coma = " , "
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct AnsMap {
-    mp: BTreeMap<String, Answer>,
+    pub mp: BTreeMap<String, Answer>,
 }
 
 impl AnsMap {
@@ -22,9 +72,15 @@ impl AnsMap {
         }
     }
 
-    pub fn insert(&mut self,k:String,v:String) -> {
-        match self.get_mut(&k){
-            Some(Answer::One(s))=
+    pub fn insert_s(&mut self, k: String, v: String) {
+        self.insert(k, Answer::One(v))
+    }
+
+    pub fn insert(&mut self, k: String, v: Answer) {
+        if let Some(gm) = self.mp.get_mut(&k) {
+            gm.join(v)
+        } else {
+            self.mp.insert(k, v);
         }
     }
 }
@@ -38,36 +94,20 @@ pub struct TwoWayMap {
 impl TwoWayMap {
     pub fn new() -> Self {
         TwoWayMap {
-            e_m: BTreeMap::new(),
-            m_e: BTreeMap::new(),
+            e_m: AnsMap::new(),
+            m_e: AnsMap::new(),
         }
     }
     pub fn insert(&mut self, r: Record) {
-        let e_ans = match self.e_m.get(&r.english) {
-            Some(Answer { a: mi, .. }) if mi == &r.michuhu => r.m_answer(),
-            Some(Answer { a: mi, extra: ex }) => Answer {
-                a: format!("{},{}", r.michuhu, mi),
-                extra: r.extra.clone().or_else(|| ex.clone()),
-            },
-            None => r.m_answer(),
-        };
-        let m_ans = match self.m_e.get(&r.michuhu) {
-            Some(Answer { a: en, .. }) if en == &r.english => r.e_answer(),
-            Some(Answer { a: en, extra: ex }) => Answer {
-                a: format!("{},{}", r.english, en),
-                extra: r.extra.clone().or_else(|| ex.clone()),
-            },
-            None => r.e_answer(),
-        };
-        self.e_m.insert(r.english.clone(), e_ans);
-        self.m_e.insert(r.michuhu.clone(), m_ans);
+        self.e_m.insert_s(r.english.clone(), r.michuhu.clone());
+        self.m_e.insert_s(r.michuhu, r.english);
     }
 
     pub fn merge(&mut self, rhs: Self) {
-        for (k, v) in rhs.e_m {
+        for (k, v) in rhs.e_m.mp {
             self.e_m.insert(k, v);
         }
-        for (k, v) in rhs.m_e {
+        for (k, v) in rhs.m_e.mp {
             self.m_e.insert(k, v);
         }
     }

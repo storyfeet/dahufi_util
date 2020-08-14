@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     if let Some(mul) = conf.grab_multi().arg("convert").done() {
         let mut sp = "";
         for w in mul {
-            let res = parser::Converter.parse_s(&w)?;
+            let res = parser::Converter.parse_s(&w).map_err(|e| e.strung())?;
             print!("{}{}", sp, res);
             sp = " ";
         }
@@ -58,22 +58,14 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn print_e_m(mp: &dict::TwoWayMap) {
-    for (k, v) in &mp.e_m {
-        if let Some(e) = &v.extra {
-            println!("{} : {} ({})", k, v.a, e);
-        } else {
-            println!("{} : {} ", k, v.a);
-        }
+    for (k, v) in &mp.e_m.mp {
+        println!("{} : {} ", k, v);
     }
 }
 
 fn print_m_e(mp: &dict::TwoWayMap) {
-    for (k, v) in &mp.m_e {
-        if let Some(e) = &v.extra {
-            println!("{} : {} ({})", k, v.a, e);
-        } else {
-            println!("{} : {} ", k, v.a);
-        }
+    for (k, v) in &mp.m_e.mp {
+        println!("{} : {} ", k, v);
     }
 }
 
@@ -88,7 +80,7 @@ fn build_dict<'a, G: Getter<'a, Out = String>>(cfg: &'a G) -> anyhow::Result<dic
             let mut s = String::new();
             let mut f = std::fs::File::open(fname?)?;
             f.read_to_string(&mut s)?;
-            let lines = parser::Dict.parse_s(&s)?;
+            let lines = parser::Dict.parse_s(&s).map_err(|e| e.strung())?;
             res.merge(lines);
         }
     }
@@ -98,18 +90,12 @@ fn build_dict<'a, G: Getter<'a, Out = String>>(cfg: &'a G) -> anyhow::Result<dic
 fn translate_words<I: Iterator<Item = S>, S: AsRef<str>>(mp: &dict::TwoWayMap, i: I) {
     for w in i {
         let mut not_found = false;
-        match mp.e_m.get(w.as_ref()) {
-            Some(dict::Answer { a, extra: Some(v) }) => {
-                println!("E: {} = {}   ({})", w.as_ref(), a, v)
-            }
-            Some(dict::Answer { a, .. }) => println!("E: {} = {}", w.as_ref(), a),
+        match mp.e_m.mp.get(w.as_ref()) {
+            Some(a) => println!("E: {} = {} ", w.as_ref(), a),
             None => not_found = true,
         }
-        match mp.m_e.get(w.as_ref()) {
-            Some(dict::Answer { a, extra: Some(v) }) => {
-                println!("M: {} = {}   ({})", w.as_ref(), a, v)
-            }
-            Some(dict::Answer { a, .. }) => println!("M: {} = {}", w.as_ref(), a),
+        match mp.m_e.mp.get(w.as_ref()) {
+            Some(a) => println!("M: {} = {} ", w.as_ref(), a),
             None => not_found &= not_found,
         }
         if not_found {
@@ -122,7 +108,7 @@ fn convert_stdin() -> anyhow::Result<()> {
     let mut r = stdin();
     let mut s = String::new();
     r.read_to_string(&mut s)?;
-    let res = parser::Converter.parse_s(&s)?;
+    let res = parser::Converter.parse_s(&s).map_err(|e| e.strung())?;
     print!("{}", res);
     Ok(())
 }

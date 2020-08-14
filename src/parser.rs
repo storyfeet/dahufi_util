@@ -6,46 +6,61 @@ parser! { (Converter ->String)
 }
 
 parser! { (EnStringPos -> ())
-    ((Alpha,NumDigit).iplus(),(Alpha,NumDigit," -/~").istar()).ig()
+    ((Alpha,NumDigit).iplus(),(Alpha,NumDigit,BothAllow).istar()).ig()
 }
 parser! { (MiStringPos -> ())
-    ((MiChar,NumDigit).iplus(),(MiChar,NumDigit," -/~").istar()).ig()
+    ((MiChar,NumDigit).iplus(),(MiChar,NumDigit,BothAllow).istar()).ig()
 }
 
 parser! { (Extra->String)
     ("(",(Alpha,NumDigit,WS,MiChar).star(),")").map(|(_,s,_)|s)
 }
 parser! { (MiEntry->String)
-    (string(MiStringPos),Extra).map(|(m,e)|format!("{} ({})",m.trim(),e.trim()))
+    (string(MiStringPos),maybe(Extra)).map(|(m,e_op)|
+        match e_op {
+            Some(ex)=>format!("{} ({})",m.trim(),ex.trim()),
+            None=>m.trim().to_string(),
+        }
+    )
 }
 parser! { (EnEntry->String)
-    (string(EnStringPos),Extra).map(|(m,e)|format!("{} ({})",m.trim(),e.trim()))
+    (string(EnStringPos),maybe(Extra)).map(|(m,e_op)|
+        match e_op {
+            Some(ex)=>format!("{} ({})",m.trim(),ex.trim()),
+            None=>m.trim().to_string(),
+        }
+    )
 }
 
 parser! { (Record->dict::Record)
     or(
-        (ws__(EnEntry),":" ,ws_(MiEntry) ,maybe(Extra)).map(|(english,_,michuhu,extra)| dict::Record{english,michuhu}),
-        (ws__(MiEntry),":" ,ws_(EnEntry) ,maybe(Extra)).map(|(michuhu,_,english,extra)| dict::Record{english,michuhu})
+        (ws_(EnEntry),":" ,ws_(MiEntry)).map(|(english,_,michuhu)| dict::Record{english,michuhu}),
+        (ws_(MiEntry),":" ,ws_(EnEntry)).map(|(michuhu,_,english)| dict::Record{english,michuhu})
     )
 }
 
-parser! { (RLine->Option<dict::Record>)
-    (
-        maybe(Record),
-        Any.except("\n|").istar(),
-        or("\n|".one().ig(),eoi),
+parser! { (EmptyLine ->())
+    (Any.except("\n|").istar(),"\n|".one()).ig()
+}
+
+parser! { (RecordLine->dict::Record)
+    middle(
+        maybe(or_ig!("*",(NumDigit.star(),"."))),
+        Record,
+        (maybe(ws__(",")),"\n|".one()),
     )
-        .map(|(a,_,_)|a)
+}
+
+parser! { (NextRecord->dict::Record)
+    star_until(EmptyLine,RecordLine).map(|(_,v)|v)
 }
 
 parser! { (Dict->dict::TwoWayMap)
-    star_until_ig(RLine,eoi)
-        .map(|v|{
+    (star(NextRecord),star(EmptyLine),ws_(eoi))
+        .map(|(v,_,_)|{
             let mut res = dict::TwoWayMap::new();
-            for i in v{
-                if let Some(r) = i{
-                    res.insert(r);
-                }
+            for r in v{
+                res.insert(r);
             }
             res
        })
@@ -72,6 +87,9 @@ fn consonant(s: &str) -> u32 {
         "th" | "t" => 0xe00c,
         "fl" | "v" => 0xe00d,
         "l" => 0xe055,
+        "cl" => 0xe056,
+        "bl" => 0xe057,
+        "sh" | "z" => 0xe058,
         _ => 0xe001,
     }
 }
@@ -96,7 +114,7 @@ parser! {( MLetter->char)
 }
 
 parser! { (MCons->&'static str)
-    or!("k","d","ch","c","s","y","h","fl","v","f","w","m","j","b","n","th","t","l")
+    or!("cl","k","d","ch","c","sh","s","y","h","fl","v","f","w","m","j","bl","b","n","th","t","l","z")
 }
 
 parser! { (MVowel->char)
@@ -104,3 +122,4 @@ parser! { (MVowel->char)
 }
 
 char_bool!(MiChar, |c| c >= '' && c <= '');
+char_bool!(BothAllow, "?&/ \t~-");
