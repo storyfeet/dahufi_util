@@ -5,22 +5,27 @@ parser! { (Converter ->String)
     chars_until(Letter, eoi).map(|(a, _b)| a)
 }
 
-parser! { (EnString -> String)
-    string(((Alpha,NumDigit).iplus(),(Alpha,NumDigit," -").istar())).map(|s|s.trim().to_string())
+parser! { (EnStringPos -> ())
+    ((Alpha,NumDigit).iplus(),(Alpha,NumDigit," -/~").istar()).ig()
 }
-
-parser! { (MiString->String)
-    string(((MiChar).iplus(),(MiChar," -").istar())).map(|s|s.trim().to_string())
+parser! { (MiStringPos -> ())
+    ((MiChar,NumDigit).iplus(),(MiChar,NumDigit," -/~").istar()).ig()
 }
 
 parser! { (Extra->String)
-    ("(",(Alpha,NumDigit,WS,MiChar).star(),")").map(|(_,b,_)|b)
+    ("(",(Alpha,NumDigit,WS,MiChar).star(),")").map(|(_,s,_)|s)
+}
+parser! { (MiEntry->String)
+    (string(MiStringPos),Extra).map(|(m,e)|format!("{} ({})",m.trim(),e.trim()))
+}
+parser! { (EnEntry->String)
+    (string(EnStringPos),Extra).map(|(m,e)|format!("{} ({})",m.trim(),e.trim()))
 }
 
 parser! { (Record->dict::Record)
     or(
-        (ws_(EnString),":" ,ws_(MiString) ,maybe(Extra)).map(|(english,_,michuhu,extra)| dict::Record{english,michuhu,extra}),
-        (ws_(MiString),":" ,ws_(EnString) ,maybe(Extra)).map(|(michuhu,_,english,extra)| dict::Record{english,michuhu,extra})
+        (ws__(EnEntry),":" ,ws_(MiEntry) ,maybe(Extra)).map(|(english,_,michuhu,extra)| dict::Record{english,michuhu}),
+        (ws__(MiEntry),":" ,ws_(EnEntry) ,maybe(Extra)).map(|(michuhu,_,english,extra)| dict::Record{english,michuhu})
     )
 }
 
@@ -34,7 +39,7 @@ parser! { (RLine->Option<dict::Record>)
 }
 
 parser! { (Dict->dict::TwoWayMap)
-    repeat_until_ig(RLine,eoi)
+    star_until_ig(RLine,eoi)
         .map(|v|{
             let mut res = dict::TwoWayMap::new();
             for i in v{
@@ -50,41 +55,52 @@ parser! {(Letter->char)
     or(MLetter,Any.one())
 }
 
-parser! {( MLetter->char)
-    (MCons,maybe(MVowel)).map(|(k,vop)|{
-        std::char::from_u32(match k {
-            "k"=> 0xe000,
-            "d"=> 0xe001,
-            "ch"|"c"=> 0xe002,
-            "s"=> 0xe003,
-            "y"=> 0xe004,
-            "h"=> 0xe005,
-            "f"=> 0xe006,
-            "w"=> 0xe007,
-            "m"=> 0xe008,
-            "j"=> 0xe009,
-            "b"=> 0xe00a,
-            "n"=> 0xe00b,
-            "th"|"t"=> 0xe00c,
-            "fl"|"v"=> 0xe00d,
-            _=>0xe001,
-        } + match vop {
-            Some('a')=>14,
-            Some('i')=>14*2,
-            Some('o')=>14*3,
-            Some('u')=>14*4,
-            _=>0,
+fn consonant(s: &str) -> u32 {
+    match s {
+        "k" => 0xe000,
+        "d" => 0xe001,
+        "ch" | "c" => 0xe002,
+        "s" => 0xe003,
+        "y" => 0xe004,
+        "h" => 0xe005,
+        "f" => 0xe006,
+        "w" => 0xe007,
+        "m" => 0xe008,
+        "j" => 0xe009,
+        "b" => 0xe00a,
+        "n" => 0xe00b,
+        "th" | "t" => 0xe00c,
+        "fl" | "v" => 0xe00d,
+        "l" => 0xe055,
+        _ => 0xe001,
+    }
+}
 
-        }).unwrap_or('#')
-    })
+fn vowel(c: char) -> u32 {
+    match c {
+        'a' => 14,
+        'b' => 14 * 2,
+        'c' => 14 * 3,
+        'u' => 14 * 4,
+        _ => 0,
+    }
+}
+
+parser! {( MLetter->char)
+    or!(
+        (MCons,maybe(MVowel)).map(|(k,vop)|{
+            std::char::from_u32( consonant(k)+vop.map(|v|vowel(v)).unwrap_or(0)).unwrap_or('#')
+        }),
+        MVowel.map(|v| std::char::from_u32(0xe054 + vowel(v) ).unwrap_or('#'))
+    )
 }
 
 parser! { (MCons->&'static str)
-    or!("k","d","ch","c","s","y","h","fl","v","f","w","m","j","b","n","th","t")
+    or!("k","d","ch","c","s","y","h","fl","v","f","w","m","j","b","n","th","t","l")
 }
 
 parser! { (MVowel->char)
     or!('a','i','o','u')
 }
 
-char_bool!(MiChar, |c| c >= '' && c <= '');
+char_bool!(MiChar, |c| c >= '' && c <= '');

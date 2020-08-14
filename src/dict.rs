@@ -4,34 +4,35 @@ use std::collections::BTreeMap;
 pub struct Record {
     pub english: String,
     pub michuhu: String,
-    pub extra: Option<String>,
 }
 
-impl Record {
-    fn e_answer(&self) -> Answer {
-        Answer {
-            a: self.english.clone(),
-            extra: self.extra.clone(),
-        }
-    }
-    fn m_answer(&self) -> Answer {
-        Answer {
-            a: self.michuhu.clone(),
-            extra: self.extra.clone(),
-        }
-    }
+pub enum Answer {
+    One(String),
+    Many(Vec<String>),
 }
 
-#[derive(Debug)]
-pub struct Answer {
-    pub a: String,
-    pub extra: Option<String>,
+pub struct AnsMap {
+    mp: BTreeMap<String, Answer>,
+}
+
+impl AnsMap {
+    pub fn new() -> Self {
+        AnsMap {
+            mp: BTreeMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self,k:String,v:String) -> {
+        match self.get_mut(&k){
+            Some(Answer::One(s))=
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct TwoWayMap {
-    pub e_m: BTreeMap<String, Answer>,
-    pub m_e: BTreeMap<String, Answer>,
+    pub e_m: AnsMap,
+    pub m_e: AnsMap,
 }
 
 impl TwoWayMap {

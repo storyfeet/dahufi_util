@@ -8,11 +8,11 @@ edition = "2018"
 #
 [lib]
 path="src/lib.rs"
-name="michuhu_lib"
+name="dahufi_lib"
 
 [[bin]]
 path="src/main.rs"
-name="michuhu"
+name="dahufi"
 
 [dependencies]
 gobble = {path="../../mlibs/gobble/"}
