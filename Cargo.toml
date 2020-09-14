@@ -7,7 +7,7 @@ keywords = ["conlang","dahufi","converter","dictionary","builder"]
 license = "MIT"
 description = "A program to write and convert to Dahufi Language"
 readme = "readme.md"
-homepage = "dahufi.storyfeet.com"
+homepage = "http://dahufi.storyfeet.com"
 repository = "https://github.com/storyfeet/dahufi_util"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
