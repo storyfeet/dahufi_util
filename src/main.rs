@@ -69,7 +69,7 @@ fn print_m_e(mp: &dict::TwoWayMap) {
     }
 }
 
-fn build_dict<'a, G: Getter<'a, Out = String>>(cfg: &'a G) -> anyhow::Result<dict::TwoWayMap> {
+fn build_dict<'a, G: Getter<'a, String>>(cfg: &'a G) -> anyhow::Result<dict::TwoWayMap> {
     let files = cfg.grab_multi().arg("files").conf("files").req()?;
 
     let mut res = dict::TwoWayMap::new();
