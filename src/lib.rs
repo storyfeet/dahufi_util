@@ -1,9 +1,21 @@
+use wasm_bindgen::prelude::*;
+
 use gobble::*;
 pub mod dict;
 pub mod parser;
 
-fn cons_str(n: u32) -> &'static str {
-    match n {
+#[cfg(feature = "wee_alloc")]
+#[glocal_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+fn roman_cons(c: char) -> &'static str {
+    let n = c as u32 - 0xe000;
+    let cons = if n < 0xe054 {
+        n % 14
+    } else {
+        15 + (n - 0xe054) % 14
+    };
+    match cons {
         0 => "k",
         1 => "d",
         2 => "ch",
@@ -18,6 +30,12 @@ fn cons_str(n: u32) -> &'static str {
         11 => "n",
         12 => "th",
         13 => "fl",
+        14 => "",
+        15 => "l",
+        16 => "gn",
+        17 => "bl",
+        18 => "sh",
+
         _ => "#",
     }
 }
@@ -27,9 +45,8 @@ pub fn romanize_char(c: char) -> String {
         return c.to_string();
     }
     let n = c as u32 - 0xe000;
-    let cons = n % 14;
-    let vow = n / 14;
-    let mut res = cons_str(cons).to_string();
+    let vow = (n / 14) % 6;
+    let mut res = roman_cons(c).to_string();
     res.push_str(match vow {
         0 => "",
         1 => "a",
@@ -51,4 +68,9 @@ pub fn romanize_str(s: &str) -> String {
         }
     }
     res
+}
+
+#[wasm_bindgen]
+pub fn dahufize_str(s: &str) -> String {
+    parser::Converter.parse_s(s).unwrap_or("".to_string())
 }

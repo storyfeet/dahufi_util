@@ -87,7 +87,7 @@ fn consonant(s: &str) -> u32 {
         "th" | "t" => 0xe00c,
         "fl" | "v" => 0xe00d,
         "l" => 0xe055,
-        "cl" => 0xe056,
+        "ng" | "g" => 0xe056,
         "bl" => 0xe057,
         "sh" | "z" => 0xe058,
         _ => 0xe001,
@@ -114,7 +114,7 @@ parser! {( MLetter->char)
 }
 
 parser! { (MCons->&'static str)
-    or!("cl","k","d","ch","c","sh","s","y","h","fl","v","f","w","m","j","bl","b","n","th","t","l","z")
+    or!("ng","ch","th","sh","fl","bl","g","k","d","c","s","y","h","v","f","w","m","j","b","n","t","l","z")
 }
 
 parser! { (MVowel->char)
