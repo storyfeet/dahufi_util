@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 
 use gobble::*;
 pub mod dict;
+pub mod old_to_new;
 pub mod parser;
 
 #[cfg(feature = "wee_alloc")]

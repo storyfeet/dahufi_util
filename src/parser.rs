@@ -40,7 +40,7 @@ parser! { (Record->dict::Record)
 }
 
 parser! { (EmptyLine ->())
-    (Any.except("\n|").istar(),"\n|".one()).ig()
+    (not("\n|").istar(),"\n|".one()).ig()
 }
 
 parser! { (RecordLine->dict::Record)
@@ -97,8 +97,8 @@ fn consonant(s: &str) -> u32 {
 fn vowel(c: char) -> u32 {
     match c {
         'a' => 14,
-        'b' => 14 * 2,
-        'c' => 14 * 3,
+        'i' => 14 * 2,
+        'o' => 14 * 3,
         'u' => 14 * 4,
         _ => 0,
     }
@@ -122,4 +122,41 @@ parser! { (MVowel->char)
 }
 
 char_bool!(MiChar, |c| c >= '' && c <= '');
-char_bool!(BothAllow, "?&/ \t~-");
+char_bool!(BothAllow, "'?&/ \t~-");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_record_with_extra() {
+        let s = "hello(greeting): ";
+        let record = Record.parse_s(s).unwrap();
+        assert_eq!(
+            record,
+            dict::Record {
+                english: "hello (greeting)".to_string(),
+                michuhu: "".to_string(),
+            }
+        );
+    }
+    #[test]
+    fn test_multi_record_with_extra() {
+        let s = "Way(Path):,
+        Way(Method):,
+        ";
+        let v = star(NextRecord).parse_s(s).unwrap();
+        assert_eq!(
+            v,
+            vec![
+                dict::Record {
+                    english: "Way (Path)".to_string(),
+                    michuhu: "".to_string(),
+                },
+                dict::Record {
+                    english: "Way (Method)".to_string(),
+                    michuhu: "".to_string(),
+                }
+            ]
+        );
+    }
+}
